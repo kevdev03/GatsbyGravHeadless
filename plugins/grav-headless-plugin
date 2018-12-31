@@ -1,0 +1,57 @@
+const axios = require('axios').default
+const createNodeHelpers  = require('gatsby-node-helpers').default
+const slug = require('slug')
+
+const basePath = `http://localhost/sgh`;
+
+exports.sourceNodes = async ({actions}) => {
+    const {createNode} = actions
+    const data = await fetchProducts()
+
+    // console.log('data-->', data)
+
+    data.forEach(x => {
+        createNode(x)
+    })
+    
+    return
+}
+
+fetchProducts = async (e) => {
+    const {
+        createNodeFactory,
+        generateNodeId,
+        generateTypeName
+    } = createNodeHelpers({
+        typePrefix: `Snipcart`
+    })
+
+    const ProductNode = createNodeFactory('Product', node => {
+        return node
+    })
+
+    try
+    {
+        // This is where we call Grav API.
+        const response = await axios.get(`${basePath}/products`, {
+            params: {
+                "return-as": "json"
+            }
+        })
+    
+        return response.data.children
+            .map(x => x.header)
+            .map(x => Object.assign(x, {
+                userDefinedId: x.id,
+                path: `/products/${slug(x.name)}`.toLowerCase(),
+                // image: {
+                //     path: `${basePath}/${x.image.path}`
+                // }
+            }))
+            .map(ProductNode)
+    }
+    catch (error) {
+        console.log(error)
+        throw e
+    }
+}
